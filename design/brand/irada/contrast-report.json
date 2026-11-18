@@ -1,0 +1,121 @@
+[
+  {
+    "role": "Button label",
+    "foreground": "#FFFFFF",
+    "background": "#4B32F4",
+    "ratio": 6.86,
+    "normal_text": true
+  },
+  {
+    "role": "Light primary text",
+    "foreground": "#11121A",
+    "background": "#FFFFFF",
+    "ratio": 18.66,
+    "normal_text": true
+  },
+  {
+    "role": "Light secondary text",
+    "foreground": "#5C5B6D",
+    "background": "#FFFFFF",
+    "ratio": 6.62,
+    "normal_text": true
+  },
+  {
+    "role": "Light card secondary text",
+    "foreground": "#5C5B6D",
+    "background": "#F6F4FF",
+    "ratio": 6.08,
+    "normal_text": true
+  },
+  {
+    "role": "Light accent text",
+    "foreground": "#4B32F4",
+    "background": "#FFFFFF",
+    "ratio": 6.86,
+    "normal_text": true
+  },
+  {
+    "role": "Dark primary text",
+    "foreground": "#F5F3FF",
+    "background": "#11121A",
+    "ratio": 17.02,
+    "normal_text": true
+  },
+  {
+    "role": "Dark card secondary text",
+    "foreground": "#BCB8CE",
+    "background": "#20212F",
+    "ratio": 8.25,
+    "normal_text": true
+  },
+  {
+    "role": "Dark accent text",
+    "foreground": "#C4B5FD",
+    "background": "#11121A",
+    "ratio": 10.11,
+    "normal_text": true
+  },
+  {
+    "role": "Selected label",
+    "foreground": "#E9E2FF",
+    "background": "#302754",
+    "ratio": 10.87,
+    "normal_text": true
+  },
+  {
+    "role": "Light destructive text",
+    "foreground": "#B4233B",
+    "background": "#FFFFFF",
+    "ratio": 6.47,
+    "normal_text": true
+  },
+  {
+    "role": "Dark destructive text",
+    "foreground": "#FF9DAE",
+    "background": "#20212F",
+    "ratio": 8.1,
+    "normal_text": true
+  },
+  {
+    "role": "Light warning text",
+    "foreground": "#7A4A00",
+    "background": "#FFF4D6",
+    "ratio": 6.83,
+    "normal_text": true
+  },
+  {
+    "role": "Dark warning text",
+    "foreground": "#FFD58A",
+    "background": "#3A2C13",
+    "ratio": 9.77,
+    "normal_text": true
+  },
+  {
+    "role": "Light success text",
+    "foreground": "#146C4D",
+    "background": "#FFFFFF",
+    "ratio": 6.4,
+    "normal_text": true
+  },
+  {
+    "role": "Dark success text",
+    "foreground": "#83DDB8",
+    "background": "#20212F",
+    "ratio": 9.85,
+    "normal_text": true
+  },
+  {
+    "role": "Avoid: base purple text on dark",
+    "foreground": "#4B32F4",
+    "background": "#11121A",
+    "ratio": 2.72,
+    "normal_text": false
+  },
+  {
+    "role": "Avoid: white text on lavender",
+    "foreground": "#FFFFFF",
+    "background": "#C4B5FD",
+    "ratio": 1.85,
+    "normal_text": false
+  }
+]
