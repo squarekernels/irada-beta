@@ -1,10 +1,10 @@
 IradaApp
 
 Android: 
-![Irada-Android-Screens](design/ui-mockups/pocketbuddy-android-screens.png),
+![Irada-Android-Screens](design/ui-mockups/irada-android-screens.png),
 
 iOS: 
-![Irada-iOS-Screens](design/ui-mockups/pocketbuddy-ios-screens.png),
+![Irada-iOS-Screens](design/ui-mockups/irada-ios-screens.png),
 
 Settings:
-![System States](design/ui-mockups/pocketbuddy-system-states.png),
+![System States](design/ui-mockups/irada-system-states.png),

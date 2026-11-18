@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 320" role="img" aria-labelledby="title description">
+  <title id="title">Irada horizontal logo</title>
+  <desc id="description">The thought-to-intent symbol followed by the Irada wordmark.</desc>
+  <g transform="translate(22 4) scale(0.62)">
+    <path
+      d="M 368 72 C 372 157 348 232 298 287 C 253 337 191 363 130 356 C 76 350 49 309 61 262 C 75 209 133 179 186 197 C 233 213 270 249 301 284"
+      fill="none"
+      stroke="#4B32F4"
+      stroke-width="82"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </g>
+  <text
+    x="300"
+    y="220"
+    fill="#11121A"
+    font-family="Inter, 'SF Pro Display', Roboto, Arial, sans-serif"
+    font-size="182"
+    font-weight="650"
+    letter-spacing="-5"
+  >Irada</text>
+</svg>

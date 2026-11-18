@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">Irada thought-to-intent symbol, monochrome</title>
+  <desc id="description">A continuous rounded loop resolving into an upright stroke.</desc>
+  <path
+    d="M 368 72 C 372 157 348 232 298 287 C 253 337 191 363 130 356 C 76 350 49 309 61 262 C 75 209 133 179 186 197 C 233 213 270 249 301 284"
+    fill="none"
+    stroke="#000000"
+    stroke-width="82"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
