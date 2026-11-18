@@ -1,0 +1,40 @@
+
+# Node.js / API
+node_modules/
+npm-debug.log*
+.env
+.env.*
+!.env.example
+
+# SQLite runtime databases
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
+
+# Android / Gradle
+.gradle/
+**/build/
+local.properties
+*.apk
+*.aab
+*.hprof
+
+# iOS / Xcode
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.ipa
+*.dSYM/
+*.dSYM.zip
+
+# React Native / Metro (future)
+.metro-health-check*
+.expo/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
