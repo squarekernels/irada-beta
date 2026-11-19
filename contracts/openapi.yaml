@@ -1,0 +1,8 @@
+openapi: 3.0.3
+info:
+  title: Irada API
+  version: 0.0.0
+  description: >-
+    Contract scaffold. Endpoint definitions will be added from the Fastify API
+    before generating clients; this file does not yet describe its routes.
+paths: {}
