@@ -47,3 +47,29 @@ curl -X POST http://localhost:3000/api/plan-preview \
 After the user edits and approves that response, send the accepted task fields to `POST /api/tasks/batch`.
 
 Due dates use `YYYY-MM-DD`. Reminder values use local wall-clock ISO strings such as `2026-11-19T09:00:00` without a UTC offset, matching the product rule that ordinary reminders remain anchored to the intended local time when the user travels.
+
+## Preview context (Android Stage 2)
+
+`POST /api/plan-preview` accepts `input` (1–10,000 characters) and optional:
+
+- `locale`: a BCP 47 language tag, such as `en-PK`.
+- `timeZone`: an IANA time zone, such as `Asia/Karachi`. Input-only callers use UTC.
+- `defaultReminderTime`: local `HH:mm`, default `09:00`; used only with explicit reminder intent.
+
+Example body:
+
+```json
+{"input":"Remind me tomorrow at 9 to buy groceries","locale":"en-PK","timeZone":"Asia/Karachi","defaultReminderTime":"09:00"}
+```
+
+The response retains `input`, `tasks`, `isStub`, and `message`, and adds `warnings` (an array of plain-language interpretation notes). Dates are `YYYY-MM-DD`; reminders are local wall-clock `YYYY-MM-DDTHH:mm:ss` values without UTC offsets. The clock is captured once per request and relative dates use the supplied zone. Preview does not write tasks or drafts.
+
+This is a limited English development stub, not AI. It splits newline/comma/semicolon/“and” clauses, recognizes `today` and `tomorrow`, and recognizes numeric reminder times following `at` (24-hour or AM/PM). Bare `9` means 09:00. Unrecognized timing stays undated. No reminder is proposed without “remind me” and a recognized date. A passed reminder moves to the next local day and is flagged, independently of the task’s due date. General natural-language extraction, calendar dates, and DST-gap disambiguation remain outside this stub.
+
+| Input | Due date | Reminder |
+| --- | --- | --- |
+| Buy groceries | null (Anytime) | null |
+| Buy groceries tomorrow | Tomorrow in supplied zone | null |
+| Remind me tomorrow at 9 to buy groceries | Tomorrow in supplied zone | Tomorrow at 09:00 |
+
+For repeatable emulator failure checks, run `node test-support/preview-server.js`. This loopback-only fixture uses an in-memory database and does not log inputs. `POST /__validation` with `{"mode":"normal"}`, `slow` (30 seconds), `failure` (503), or `invalid` controls previews. `GET /__validation` returns the mode and request count. These routes exist only in the fixture; `src/server.js` does not expose them.

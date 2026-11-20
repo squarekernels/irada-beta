@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import Fastify from 'fastify';
 import { openDatabase, toSettings, toTask } from './db.js';
-import { createPlanPreview } from './planner.js';
+import { createPlanPreview, validTimeZone, validLocale } from './planner.js';
 
 const taskInputSchema = {
   type: 'object',
@@ -39,10 +39,20 @@ export function buildApp(options = {}) {
         additionalProperties: false,
         properties: {
           input: { type: 'string', minLength: 1, maxLength: 10000 },
+          locale: { type: 'string', minLength: 1, maxLength: 100 },
+          timeZone: { type: 'string', minLength: 1, maxLength: 100 },
+          defaultReminderTime: { type: 'string', pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' },
         },
       },
     },
-  }, async (request) => createPlanPreview(request.body.input));
+  }, async (request, reply) => {
+    const { input, locale, timeZone, defaultReminderTime } = request.body;
+    if (!input.trim() || (locale !== undefined && !validLocale(locale)) ||
+        (timeZone !== undefined && !validTimeZone(timeZone))) {
+      return reply.code(400).send({ error: 'Provide input and valid locale/time-zone context.' });
+    }
+    return createPlanPreview(input, { locale, timeZone, defaultReminderTime }, options.now?.() ?? new Date());
+  });
 
   app.get('/api/draft', async (_request, reply) => {
     const row = database.prepare('SELECT * FROM pending_draft WHERE singleton_id = 1').get();

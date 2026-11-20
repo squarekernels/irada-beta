@@ -1,3 +1,5 @@
+import java.net.URI
+
 plugins {
   alias(libs.plugins.ksp)
   alias(libs.plugins.android.application)
@@ -6,7 +8,7 @@ plugins {
 }
 
 android {
-  namespace = providers.gradleProperty("irada.applicationId").get()
+  namespace = "com.ctxaware.irada"
   compileSdk = providers.gradleProperty("irada.compileSdk").get().toInt()
   defaultConfig {
     applicationId = providers.gradleProperty("irada.applicationId").get()
@@ -17,8 +19,21 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
+  val configuredPreviewUrl = providers.gradleProperty("irada.previewBaseUrl").orElse("").get()
+  if (configuredPreviewUrl.isNotEmpty()) {
+    val uri = URI(configuredPreviewUrl)
+    require(uri.host != null && uri.userInfo == null && uri.query == null && uri.fragment == null)
+    require(uri.scheme == "https" || (uri.scheme == "http" && uri.host in listOf("127.0.0.1", "localhost"))) {
+      "Preview URL must use HTTPS, or HTTP loopback for debug builds."
+    }
+  }
   buildTypes {
+    debug {
+      buildConfigField("String", "PREVIEW_BASE_URL", "\"${configuredPreviewUrl.ifEmpty { "http://127.0.0.1:3000/" }}\"")
+    }
     release {
+      val releaseUrl = configuredPreviewUrl.takeIf { it.startsWith("https://") }.orEmpty()
+      buildConfigField("String", "PREVIEW_BASE_URL", "\"$releaseUrl\"")
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
     }
@@ -30,7 +45,7 @@ android {
   buildFeatures {
     compose = true
     aidl = false
-    buildConfig = false
+    buildConfig = true
     shaders = false
   }
 
@@ -47,6 +62,9 @@ kotlin {
 }
 
 dependencies {
+  implementation(libs.okhttp)
+  implementation(libs.serialization.json)
+  testImplementation(libs.mockwebserver)
   implementation(libs.room.runtime)
   ksp(libs.room.compiler)
   implementation(libs.datastore.preferences)
@@ -90,6 +108,4 @@ dependencies {
 }
 
 // Export schemas for future migrations; never discard a pending draft on upgrade.
-ksp { arg("room.schemaLocation", "$projectDir/schemas") }
-
 ksp { arg("room.schemaLocation", "$projectDir/schemas") }

@@ -28,5 +28,28 @@
     <string name="draft_saving">Saving draft…</string>
     <string name="draft_saved">Draft saved on this device</string>
     <string name="save_failed">Draft could not be saved. Keep this screen open and retry.</string>
-    <string name="capture_stage1">Capture is ready. Plan generation is coming next. No tasks or reminders have been created.</string>
+
+    <string name="make_plan">Make a plan</string>
+    <string name="input_too_long">Keep your input to 10,000 characters or fewer. Your words are still saved.</string>
+    <string name="capture_preview_note">You will see a proposal first. No tasks or reminders are created.</string>
+    <string name="processing_title">Making your plan…</string>
+    <string name="processing_body">Your input is saved on this device. You can cancel and return to it.</string>
+    <string name="cancel">Cancel</string>
+    <string name="edit_input">Edit input</string>
+    <string name="preview_failed">Could not make a plan</string>
+    <string name="needs_internet">Needs internet to make a plan. If you are online, please try again in a moment.</string>
+    <string name="invalid_preview">The proposed plan could not be read safely. Please retry or edit your input.</string>
+    <string name="save_before_preview_failed">Your draft could not be saved. Nothing was sent. Please retry.</string>
+    <string name="preview_not_configured">Plan generation is not configured for this build.</string>
+    <string name="input_safe">Your input is still here. Nothing has been approved or scheduled.</string>
+    <string name="preview_title">Your proposed plan</string>
+    <string name="placeholder_notice">Development preview · Placeholder planner</string>
+    <string name="preview_not_approved">Nothing is approved, saved as a task, or scheduled. This preview is read-only; editing and approval are coming next.</string>
+    <string name="original_input">Your original words</string>
+    <string name="check_interpretation">Check this interpretation</string>
+    <string name="suggested">Suggested</string>
+    <string name="due_value">Due: %1$s</string>
+    <string name="reminder_value">Proposed reminder: %1$s</string>
+    <string name="anytime">Anytime</string>
+    <string name="no_reminder">No reminder</string>
 </resources>

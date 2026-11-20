@@ -5,6 +5,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.activity.compose.BackHandler
+import com.ctxaware.irada.preview.PreviewState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -91,7 +93,16 @@ fun IradaApp(model: CaptureViewModel = viewModel()) {
                 )
             }
             entry<Capture> {
-                CaptureScreen(state, model::edit, model::retrySave, ::back)
+                val preview by model.preview.collectAsStateWithLifecycle()
+                BackHandler(enabled = preview != PreviewState.Editing) { model.cancelPreview() }
+                when (val current = preview) {
+                    PreviewState.Editing -> CaptureScreen(state, model::edit, model::retrySave,
+                        model::generatePreview, ::back)
+                    PreviewState.Processing -> ProcessingScreen(model::cancelPreview)
+                    is PreviewState.Failed -> PreviewErrorScreen(current.problem,
+                        model::generatePreview, model::cancelPreview)
+                    is PreviewState.Ready -> PlanPreviewScreen(current.preview, model::cancelPreview)
+                }
             }
             entry<Settings> {
                 ShellScreen(R.string.settings, R.string.settings_pending, ::back)

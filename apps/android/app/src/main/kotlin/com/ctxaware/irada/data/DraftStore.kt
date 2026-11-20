@@ -84,6 +84,9 @@ class DraftStore(context: Context) {
 
     suspend fun finishIntroduction() { preferences.edit { it[introduced] = true } }
 
+    suspend fun awaitSaved(revision: Long): Boolean =
+        !result.first { it.revision >= revision }.failed
+
     fun save(revision: Long, draft: PendingDraft) {
         cached = draft
         check(writes.trySend(revision to draft).isSuccess)

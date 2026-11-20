@@ -34,7 +34,7 @@ fun IntroductionScreen(state: CaptureState, onStart: () -> Unit, onHome: () -> U
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CaptureScreen(state: CaptureState, onEdit: (String) -> Unit, onRetry: () -> Unit, onBack: () -> Unit) {
+fun CaptureScreen(state: CaptureState, onEdit: (String) -> Unit, onRetry: () -> Unit, onGenerate: () -> Unit, onBack: () -> Unit) {
     Scaffold(
         modifier = Modifier.imePadding(),
         topBar = {
@@ -68,7 +68,15 @@ fun CaptureScreen(state: CaptureState, onEdit: (String) -> Unit, onRetry: () -> 
             if (state.saveFailed) {
                 OutlinedButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
             }
-            Text(stringResource(R.string.capture_stage1), style = MaterialTheme.typography.bodyMedium)
+            if (state.draft.input.length > 10000) {
+                Text(stringResource(R.string.input_too_long), color = MaterialTheme.colorScheme.error)
+            }
+            Button(onClick = onGenerate,
+                enabled = state.draft.input.isNotBlank() && state.draft.input.length <= 10000 && !state.saving && !state.saveFailed,
+                modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.make_plan))
+            }
+            Text(stringResource(R.string.capture_preview_note), style = MaterialTheme.typography.bodyMedium)
             OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.return_home))
             }
