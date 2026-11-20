@@ -4,6 +4,9 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ctxaware.irada.data.PendingDraft
+import com.ctxaware.irada.preview.*
+import java.util.Locale
+import java.time.ZoneId
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +28,22 @@ class CaptureViewModel(application: Application) : AndroidViewModel(application)
     private val store = (application as IradaApplication).drafts
     private val _state = MutableStateFlow(CaptureState())
     val state = _state.asStateFlow()
+    private val previews = PreviewController(viewModelScope, (application as IradaApplication).previewService) { input ->
+        PreviewRequest(input, Locale.getDefault().toLanguageTag(), ZoneId.systemDefault().id)
+    }
+    val preview = previews.state
+
+    fun generatePreview() {
+        val snapshot = _state.value
+        if (!snapshot.loaded || snapshot.draft.input.isBlank() || snapshot.draft.input.length > 10000) return
+        previews.generate(snapshot.draft.input) {
+            // Re-save the snapshot and wait for Room before any network request.
+            val revision = persist(snapshot.draft)
+            if (!store.awaitSaved(revision)) throw DraftSaveFailed()
+        }
+    }
+
+    fun cancelPreview() = previews.cancel()
 
     init {
         load()
@@ -73,13 +92,14 @@ class CaptureViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun edit(input: String) = persist(_state.value.draft.copy(input = input))
-    fun discard() = persist(PendingDraft())
-    fun retrySave() = persist(_state.value.draft)
+    fun edit(input: String) { previews.cancel(); persist(_state.value.draft.copy(input = input)) }
+    fun discard() { previews.cancel(); persist(PendingDraft()) }
+    fun retrySave() { persist(_state.value.draft) }
 
-    private fun persist(draft: PendingDraft) {
+    private fun persist(draft: PendingDraft): Long {
         val revision = store.nextRevision()
         _state.update { it.copy(draft = draft, revision = revision, saving = true, saveFailed = false) }
         store.save(revision, draft)
+        return revision
     }
 }
