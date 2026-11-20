@@ -38,3 +38,8 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Android signing keys and Kotlin caches
+*.jks
+*.keystore
+.kotlin/

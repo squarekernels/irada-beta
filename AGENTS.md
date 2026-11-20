@@ -19,6 +19,7 @@ Irada is a native-first iOS and Android app that turns natural-language brain du
 1. Create a new feature branch and switch to it:
    ```bash
    git switch -c <feature-branch-name>
+   ```
 
 2. Continue performing the assigned task on the new branch.
 3. Do not make changes directly to main or master.
@@ -31,6 +32,10 @@ After Completing Work
    git commit -m "<descriptive-commit-message>"
    git push -u origin HEAD
 
+### After a Pull Request Merges
+
+Once you verify that the feature branch’s pull request has merged into `main`, delete the feature branch from `origin` and locally. If the branch has new commits since the merge, preserve it until those commits are accounted for.
+
 **Important Rules**
 - Never commit or push without explicit owner approval.
 - Always work on a separate feature branch.
@@ -38,5 +43,17 @@ After Completing Work
 - Push to the existing origin remote.
 - Never push directly to main or master.
 - Never force-push unless explicitly authorized.
+
+## Co-Authored-By
+
+Every commit created by Codex for this project must end with the following co-author trailer, including commits pushed to GitHub. Separate the trailer from the title or optional body with a blank line.
+
+```text
+[The commit title]
+
+[Optional commit body]
+
+Co-Authored-By: codex <codex@openai.com>
+```
 
 
