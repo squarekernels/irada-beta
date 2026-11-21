@@ -57,3 +57,23 @@ fun groupOpenTasks(tasks: List<SavedTask>, today: LocalDate): List<TaskGroup> {
     }
     return TaskBucket.entries.mapNotNull { bucket -> grouped[bucket]?.let { TaskGroup(bucket, it) } }
 }
+
+
+enum class TaskFilter { OPEN, COMPLETED, ALL }
+
+fun matchingTasks(tasks: List<SavedTask>, query: String, filter: TaskFilter): List<SavedTask> {
+    val needle = query.trim()
+    return tasks.filter { task ->
+        (filter == TaskFilter.ALL || task.status == if (filter == TaskFilter.OPEN) "open" else "completed") &&
+            (needle.isEmpty() || task.title.contains(needle, ignoreCase = true) || task.notes.orEmpty().contains(needle, ignoreCase = true))
+    }.sortedWith(compareBy<SavedTask> { it.dueDate == null }.thenBy { it.dueDate }.thenBy { it.creationOrder })
+}
+
+fun validTaskEdit(before: SavedTask, after: SavedTask, now: LocalDateTime = LocalDateTime.now()): Boolean = try {
+    before.copy(title = after.title, notes = after.notes, dueDate = after.dueDate,
+        reminderAt = after.reminderAt, status = after.status, updatedAt = after.updatedAt) == after &&
+        after.title.isNotBlank() && after.title.length <= 200 && after.notes.orEmpty().length <= 5000 &&
+        after.status in listOf("open", "completed") &&
+        (after.dueDate == null || LocalDate.parse(after.dueDate).toString() == after.dueDate) &&
+        (after.reminderAt == null || after.reminderAt == before.reminderAt || LocalDateTime.parse(after.reminderAt).isAfter(now))
+} catch (_: Exception) { false }

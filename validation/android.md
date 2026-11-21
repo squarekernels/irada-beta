@@ -169,3 +169,35 @@ Remaining before owner approval: run the manual force-stop/offline walkthrough w
 Real AI, approval and task insertion are outside Stage 3. The default reminder preference is still 09:00 until Stage 7. Tests ran on the API 37 phone emulator; physical devices, TalkBack, 200% text and wider layouts have not been validated for the new editor. An abrupt kill before the save acknowledgement can interrupt the latest queued write. The brief Undo itself is transient and is not restored after leaving review or process death. Corrupt persisted review data fails visibly and is not silently discarded.
 
 Final normal-ID review APK: `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` passed with **14 unit tests** and **zero lint errors**. Installed `com.ctxaware.irada` and observed Home with its existing Resume draft entry after migration. The existing draft was not opened or changed. The temporary Stage 3 fixture was stopped, and standard `adb reverse tcp:3000 tcp:3000`, light appearance and connectivity were restored. APK: `apps/android/app/build/outputs/apk/debug/app-debug.apk`.
+
+## Stage 5 — November 21, 2026
+
+Implemented on `codex/android-stage-5`. The owner approved Stage 5 for commit and push on November 21, 2026. Stage 6 has not started.
+
+### Delivered behavior
+
+Home searches titles and notes locally, filters Open / Completed / All, and collapses completed tasks under All. Completed shows matching tasks directly. Existing due-date groups and date/creation-order sorting remain. Task bodies open details, while separately labeled buttons complete or reopen tasks. Details edits title, notes, due date/Anytime and independent reminder intent. Save changes persists explicitly; Back asks before discarding unsaved edits, and rotation retains form values. Completion, reopening, edits and deletion offer brief Undo.
+
+Task changes and Undo compare complete expected snapshots inside Room transactions. Stale edits and stale Undo cannot replace later changes. Delete/Undo restores the exact task identity, status, dates, notes, source input and creation order. Approval receipts retain the ordering high-water mark after deletion, preventing a newly approved batch from breaking a pending Undo. SQLite write failures preserve saved data and leave unsaved editor values available for a manual retry. Schema remains version 3. The global snackbar reserves its measured height so feedback cannot cover task actions during a quick complete → details → delete sequence.
+
+### Automated checks
+
+- `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`: passed for the final normal application ID, with **20 passing JVM tests** and **zero Lint errors**.
+- `./gradlew :app:connectedDebugAndroidTest -Pirada.applicationId=com.ctxaware.irada.validation`: passed on `Medium_Phone_API_37.0` in airplane mode. XML report: **23 cases, 21 passed, 2 skipped, zero failures/errors**. The skipped cases are the opt-in live Fastify HTTP tests; no live service was required for task management.
+- Six Stage 5 device cases cover overdue → Today rescheduling without changing reminder intent, completion, Completed filtering, note search, delete/Undo, reopening, saved fields after Activity relaunch, unsaved Back/rotation, SQLite failure/retry, full database reopen, stale write/Undo rejection, and approval after deleting the newest task.
+- A final targeted editor/rotation test also passed against the packaged validation build. Its opt-in `keepStage5Demo=true` instrumentation argument retained only its synthetic fixture for the manual checks below.
+- `git diff --check`: passed.
+
+Builds used the installed JDK 21. The pre-existing, untracked `gradle/gradle-daemon-jvm.properties` requested JDK 25 and stalled daemon startup; it was temporarily set to 21 during validation and restored byte-for-byte afterward. Existing untracked Stage 4 screenshots were preserved.
+
+### Manual offline acceptance and evidence
+
+The validation app retained a synthetic grocery task with notes, an overdue date and a future reminder intent. Airplane mode stayed enabled throughout. Visually inspected [Home in light appearance](android/stage5/home-offline-light.png), [task details](android/stage5/task-detail-light.png), [Home at 200% text in dark appearance](android/stage5/home-dark-200pct.png), and [Completed after force-stop/relaunch](android/stage5/completed-offline-dark.png).
+
+At 200% text, the task body and **Complete task** remained distinct focusable actions. Completing from Home left the app on Home; Completed displayed **Reopen task**. Tapping the task body opened details with status still Completed. Force-stopping and reopening offline retained completion, notes, due date and reminder intent; All initially collapsed the completed task. Returning to Completed exposed it directly. Text size was restored to 1.0 and the original dark appearance/airplane setting were preserved. The final normal-ID APK was installed without clearing data; the separate validation app remains available with synthetic review data.
+
+### Remaining limits
+
+TalkBack narration/focus order, physical devices, other Android versions, landscape and wide-screen task-management layouts remain unverified. Unsaved detail edits survive rotation but require **Save changes** for durable storage. Undo is a transient, single-operation action and does not survive process death. Notification permission, alarms, and notification reconciliation remain Stage 6 work; reminder delivery is explicitly shown as unavailable.
+
+Review APK: `apps/android/app/build/outputs/apk/debug/app-debug.apk` (`com.ctxaware.irada`).
