@@ -12,18 +12,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import com.ctxaware.irada.ui.theme.ActionPurple
 import kotlinx.serialization.Serializable
 
 @Serializable private data object Introduction : NavKey
@@ -47,10 +42,19 @@ fun IradaApp(model: CaptureViewModel = viewModel()) {
     }
     val backStack = rememberNavBackStack(if (state.introduced) Home else Introduction)
     var choosingDraft by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.approvedBatchId) {
+        if (state.approvedBatchId != null) {
+            choosingDraft = false
+            backStack.clear()
+            backStack.add(Home)
+            model.acknowledgeApproval()
+        }
+    }
     fun back() {
         if (backStack.size > 1) backStack.removeLastOrNull()
     }
     fun capture() {
+        if (state.approving) return
         if (state.draft.input.isNotEmpty()) choosingDraft = true
         else backStack.add(Capture)
     }
@@ -86,10 +90,10 @@ fun IradaApp(model: CaptureViewModel = viewModel()) {
             }
             entry<Home> {
                 HomeScreen(
-                    onCapture = ::capture,
+                    state = state, onCapture = ::capture,
                     onSettings = { backStack.add(Settings) },
-                    hasDraft = state.draft.input.isNotEmpty(),
-                    onResume = { backStack.add(Capture) }
+                    onResume = { if (!state.approving) backStack.add(Capture) },
+                    onRetryTasks = model::loadTasks
                 )
             }
             entry<Capture> {
@@ -120,60 +124,6 @@ fun IradaApp(model: CaptureViewModel = viewModel()) {
             }
         }
     )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun HomeScreen(onCapture: () -> Unit, onSettings: () -> Unit, hasDraft: Boolean, onResume: () -> Unit) {
-    val captureLabel = stringResource(R.string.add_tasks)
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(painterResource(R.drawable.ic_irada), null,
-                            Modifier.size(32.dp), tint = MaterialTheme.colorScheme.primary)
-                        Text(stringResource(R.string.app_name))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onSettings) {
-                        Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.settings))
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onCapture,
-                modifier = Modifier.semantics { contentDescription = captureLabel },
-                containerColor = ActionPurple,
-                contentColor = Color.White,
-                icon = { Icon(painterResource(R.drawable.ic_add), null) },
-                text = { Text(stringResource(R.string.add_tasks)) }
-            )
-        }
-    ) { insets ->
-        Column(
-            Modifier.fillMaxSize().padding(insets).verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 48.dp).padding(bottom = 96.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceVariant) {
-                Column(Modifier.widthIn(max = 480.dp).padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(stringResource(R.string.empty_title), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-                    if (hasDraft) {
-                        OutlinedButton(onClick = onResume) { Text(stringResource(R.string.resume_draft)) }
-                    }
-                    Text(stringResource(R.string.empty_body), color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center)
-                }
-            }
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

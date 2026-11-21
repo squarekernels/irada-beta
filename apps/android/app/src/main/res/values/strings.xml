@@ -53,7 +53,7 @@
     <string name="anytime">Anytime</string>
     <string name="no_reminder">No reminder</string>
     <string name="review_title">Review your plan</string>
-    <string name="review_not_approved">These are proposals. No tasks have been approved and no reminders are scheduled.</string>
+    <string name="review_not_approved">Review every proposal. Tasks are saved only when you tap Approve.</string>
     <string name="your_choice">Your choice</string>
     <string name="edit_task">Edit</string>
     <string name="remove_task">Remove</string>
@@ -95,4 +95,19 @@
     <string name="reminder_time">Reminder time</string>
     <string name="set_time">Set time</string>
     <string name="original_interpretation">Original interpretation: %1$s</string>
+    <plurals name="approve_tasks">
+        <item quantity="one">Approve %1$d task</item>
+        <item quantity="other">Approve %1$d tasks</item>
+    </plurals>
+    <string name="approving_tasks">Saving tasks…</string>
+    <string name="approval_write_failed">Tasks could not be saved. Your review is still here. Please try approval again.</string>
+    <string name="approval_changed">This draft changed. The latest saved version is restored; review it before approving.</string>
+    <string name="approval_invalid">Check every title, notes length, and any reminder in the past before approving.</string>
+    <string name="tasks_load_failed">Saved tasks could not be loaded. Please retry.</string>
+    <string name="overdue">Overdue</string>
+    <string name="today">Today</string>
+    <string name="upcoming">Upcoming</string>
+    <string name="overdue_date">Overdue · %1$s</string>
+    <string name="saved_reminder_intent">Reminder requested: %1$s</string>
+    <string name="reminder_delivery_pending">Reminder delivery is not enabled yet.</string>
 </resources>

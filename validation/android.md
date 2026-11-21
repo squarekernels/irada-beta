@@ -138,6 +138,32 @@ Used only `com.ctxaware.irada.validation` for interaction and data inspection; t
 
 Evidence: [suggestions and warning](android/stage3/review-suggestions-light.png), [editing above keyboard](android/stage3/editor-keyboard-light.png), [restored edits and Anytime, dark](android/stage3/review-restored-dark.png), [storage verification](android/stage3/storage-verification.json).
 
+## Stage 4 — November 21, 2026
+
+### Delivered behavior
+
+Review approval now saves the complete reviewed batch in the Room `3` schema. The pending draft, task rows and approval receipt are committed together, while reminder values remain local intent only and are not scheduled.
+
+The approval path waits for the latest draft save, blocks review mutations while the transaction runs, compares the full saved draft identity and contents against the screen snapshot, and rejects stale or invalid batches. Stable task identities use the batch/proposal pair. Persisted receipts make repeated approval idempotent across separate Room connections.
+
+A SQLite insert failure rolls back task inserts, the approval receipt and draft consumption. The explicit approval retry succeeds afterward without regenerating or replacing the reviewed input. Success clears the consumed draft and returns to Home.
+
+Home observes Room directly and refreshes the local date on resume and across midnight. Open tasks are grouped into Overdue, Today, Upcoming and Anytime, sorted by due date and stable creation order.
+
+### Automated checks
+
+- `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug`: passed after serializing Gradle daemon state.
+- `./gradlew :app:connectedDebugAndroidTest -Pirada.applicationId=com.ctxaware.irada.validation -Pandroid.testInstrumentationRunnerArguments.class=com.ctxaware.irada.ApprovalFlowTest`: passed 2/2 UI tests on API 37 after clearing stale validation-app state.
+- `./gradlew :app:connectedDebugAndroidTest -Pirada.applicationId=com.ctxaware.irada.validation -Pandroid.testInstrumentationRunnerArguments.class=com.ctxaware.irada.ApprovalTransactionTest`: passed 4/4 device tests.
+- Unit tests and Android Lint passed with no errors.
+- Tests cover duplicate approval from separate database connections, reopening, stale-review rejection, invalid approval, rollback after a second task insert fails, exact title/notes/due/reminder values, stable order and source input.
+
+### Evidence and remaining limits
+
+Evidence: [approval light](android/stage4/approval-light.png), [offline Home light](android/stage4/home-offline-light.png), [offline Home dark](android/stage4/home-offline-dark.png).
+
+Remaining before owner approval: run the manual force-stop/offline walkthrough with Fastify stopped, verify exactly one copy after reopening, inspect the copied SQLite data to confirm the consumed draft, and reconfirm the rollback/retry flow with a fresh validation database. The emulator is API 37 and the implementation does not add notification permission or alarm scheduling; those remain Stage 6.
+
 ### Remaining limits
 
 Real AI, approval and task insertion are outside Stage 3. The default reminder preference is still 09:00 until Stage 7. Tests ran on the API 37 phone emulator; physical devices, TalkBack, 200% text and wider layouts have not been validated for the new editor. An abrupt kill before the save acknowledgement can interrupt the latest queued write. The brief Undo itself is transient and is not restored after leaving review or process death. Corrupt persisted review data fails visibly and is not silently discarded.
