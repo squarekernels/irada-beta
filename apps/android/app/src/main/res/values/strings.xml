@@ -6,7 +6,7 @@
     <string name="empty_title">A little space to think</string>
     <string name="empty_body">Describe what needs doing. Review your plan before saving it.</string>
     <string name="capture_title">What needs doing?</string>
-    <string name="settings_pending">Notification, reminder, appearance and local-data controls are coming in later stages.</string>
+    <string name="settings_pending">Reminder defaults, appearance and local-data controls are coming in Stage 7.</string>
     <string name="return_home">Back to tasks</string>
     <string name="intro_title">A little space to think</string>
     <string name="intro_body">Describe what needs doing. Review the proposed plan and make it yours.</string>
@@ -109,7 +109,7 @@
     <string name="upcoming">Upcoming</string>
     <string name="overdue_date">Overdue · %1$s</string>
     <string name="saved_reminder_intent">Reminder requested: %1$s</string>
-    <string name="reminder_delivery_pending">Reminder delivery is not enabled yet.</string>
+    <string name="reminder_delivery_pending">Android may delay reminder delivery. Notifications must be enabled in system settings.</string>
     <string name="search_tasks">Search tasks</string>
     <string name="filter_open">Open</string>
     <string name="filter_completed">Completed</string>
@@ -141,4 +141,10 @@
     <string name="task_change_failed">Change could not be saved. Your saved tasks are unchanged. Reopen the task and try again.</string>
     <string name="set_task_reminder">Set reminder</string>
     <string name="change_task_reminder">Change reminder</string>
+    <string name="reminder_channel">Task reminders</string>
+    <string name="reminder_notification">Your Irada task reminder</string>
+    <string name="reminders_enabled">Reminders enabled. Android may delay delivery.</string>
+    <string name="reminders_disabled">Reminder delivery is disabled. Your tasks are saved.</string>
+    <string name="reminders_failed">Your tasks are saved, but reminders could not be updated. Retry.</string>
+    <string name="notification_settings">Open notification settings</string>
 </resources>

@@ -6,6 +6,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import android.Manifest
+import android.content.Intent
+import android.provider.Settings as AndroidSettings
+import com.ctxaware.irada.reminders.DeliveryStatus
 import com.ctxaware.irada.preview.PreviewState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -29,6 +38,14 @@ import kotlinx.serialization.Serializable
 
 @Composable
 fun IradaApp(model: CaptureViewModel = viewModel()) {
+    val context = LocalContext.current
+    val reminders = (context.applicationContext as IradaApplication).reminders
+    val delivery by reminders.status.collectAsStateWithLifecycle()
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { reminders.refresh() }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { reminders.refresh() }
+    fun requestReminderPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= 33 && reminders.claimPermissionRequest()) permission.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
     val management: TaskManagementViewModel = viewModel()
     val managementState by management.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
@@ -134,7 +151,10 @@ fun IradaApp(model: CaptureViewModel = viewModel()) {
                             }
                             when {
                                 editingTask != null -> ProposalEditorScreen(editingTask, state, model, onBack = { selectedTask = null })
-                                hasReview -> ReviewScreen(state, model, onEdit = { selectedTask = it }, onBack = ::back)
+                                hasReview -> ReviewScreen(state, model, onEdit = { selectedTask = it }, onBack = ::back, onApprove = {
+                                    if (state.review?.tasks?.any { it.reminderAt != null } == true) requestReminderPermission()
+                                    model.approve()
+                                })
                                 else -> when (val current = preview) {
                                     PreviewState.Editing -> CaptureScreen(state, model::edit, model::retrySave, model::generatePreview, ::back)
                                     PreviewState.Processing -> ProcessingScreen(model::cancelPreview)
@@ -145,15 +165,21 @@ fun IradaApp(model: CaptureViewModel = viewModel()) {
                         }
                         entry<TaskDetails> { route ->
                             TaskDetailScreen(state.tasks.firstOrNull { it.id == route.id }, managementState.busy,
-                                onSave = { before, after -> management.change(before, after, ::back) },
+                                onSave = { before, after ->
+                                    if (after.reminderAt != null && after.reminderAt != before.reminderAt) requestReminderPermission()
+                                    management.change(before, after, ::back)
+                                },
                                 onToggle = management::toggle,
                                 onDelete = { management.change(it, null, ::back) }, onBack = ::back)
                         }
                         entry<Settings> {
-                            ShellScreen(R.string.settings, R.string.settings_pending, ::back)
+                            ShellScreen(R.string.settings, R.string.settings_pending, ::back, delivery)
                         }
                     }
                 )
+            }
+            if (backStack.lastOrNull() == Home && state.tasks.any { it.status == "open" && it.reminderAt != null } && delivery != DeliveryStatus.ENABLED) {
+                Box(Modifier.navigationBarsPadding()) { ReminderStatus(delivery) }
             }
             // Reserve the host's measured height so brief feedback never covers task actions.
             SnackbarHost(snackbar, if (snackbar.currentSnackbarData != null) Modifier.navigationBarsPadding() else Modifier)
@@ -163,7 +189,7 @@ fun IradaApp(model: CaptureViewModel = viewModel()) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ShellScreen(title: Int, message: Int, onBack: () -> Unit) {
+private fun ShellScreen(title: Int, message: Int, onBack: () -> Unit, delivery: DeliveryStatus) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -178,8 +204,28 @@ private fun ShellScreen(title: Int, message: Int, onBack: () -> Unit) {
     ) { insets ->
         Column(Modifier.fillMaxSize().padding(insets).verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)) {
+            ReminderStatus(delivery)
             Text(stringResource(message), style = MaterialTheme.typography.bodyLarge)
             TextButton(onClick = onBack) { Text(stringResource(R.string.return_home)) }
         }
+    }
+}
+
+@Composable
+private fun ReminderStatus(status: DeliveryStatus) {
+    val context = LocalContext.current
+    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)) {
+        Text(stringResource(when (status) {
+            DeliveryStatus.ENABLED -> R.string.reminders_enabled
+            DeliveryStatus.DISABLED -> R.string.reminders_disabled
+            DeliveryStatus.ERROR -> R.string.reminders_failed
+        }), style = MaterialTheme.typography.bodyMedium)
+        if (status == DeliveryStatus.ERROR) TextButton(onClick = {
+            (context.applicationContext as IradaApplication).reminders.refresh()
+        }) { Text(stringResource(R.string.retry)) }
+        if (status == DeliveryStatus.DISABLED) TextButton(onClick = {
+            context.startActivity(Intent(AndroidSettings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(AndroidSettings.EXTRA_APP_PACKAGE, context.packageName))
+        }) { Text(stringResource(R.string.notification_settings)) }
     }
 }

@@ -18,5 +18,10 @@ class IradaApplication : Application() {
             throw IOException("No network")
         client.generate(request)
     }
+    val reminders by lazy { com.ctxaware.irada.reminders.ReminderCoordinator(this, tasks = { drafts.savedTasks() }) }
     val drafts by lazy { DraftStore(this) }
+    override fun onCreate() {
+        super.onCreate()
+        reminders.refresh()
+    }
 }

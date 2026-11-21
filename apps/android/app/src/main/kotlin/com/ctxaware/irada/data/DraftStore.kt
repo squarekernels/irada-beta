@@ -59,6 +59,8 @@ private sealed interface DraftOperation {
 data class WriteResult(val revision: Long, val failed: Boolean)
 
 class DraftStore(context: Context) {
+    private val reminders get() = (contextApp as com.ctxaware.irada.IradaApplication).reminders
+    private val contextApp = context.applicationContext
     private val revisions = AtomicLong()
     @Volatile private var cached: PendingDraft? = null
     private val database = IradaDatabase.open(context)
@@ -85,7 +87,7 @@ class DraftStore(context: Context) {
                 }
                 is DraftOperation.Approve -> {
                     try {
-                        val receipt = database.approvals().approve(operation.draft, System.currentTimeMillis(), LocalDateTime.now().toString())
+                        val receipt = reminders.change { database.approvals().approve(operation.draft, System.currentTimeMillis(), LocalDateTime.now().toString()) }
                         val next = cached?.takeIf { it.batchId != operation.draft.batchId } ?: PendingDraft()
                         cached = next
                         operation.done.complete(ApprovalOutcome(receipt, next))
@@ -105,7 +107,9 @@ class DraftStore(context: Context) {
         return seen to draft
     }
 
-    suspend fun changeTask(before: SavedTask?, after: SavedTask?) = database.approvals().changeTask(before, after)
+    suspend fun savedTasks(): List<SavedTask> = database.approvals().tasks()
+
+    suspend fun changeTask(before: SavedTask?, after: SavedTask?) = reminders.change { database.approvals().changeTask(before, after) }
 
     val currentRevision: Long get() = revisions.get()
 

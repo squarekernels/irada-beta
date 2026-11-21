@@ -19,7 +19,11 @@ import java.util.concurrent.atomic.AtomicInteger
 class ApprovalFlowTest {
     @get:Rule val compose = createEmptyComposeRule()
     private val app get() = ApplicationProvider.getApplicationContext<IradaApplication>()
-    @Before fun cleanBeforeTest() = cleanTasks()
+    @Before fun cleanBeforeTest() {
+        if (android.os.Build.VERSION.SDK_INT >= 33) androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+            .uiAutomation.grantRuntimePermission(app.packageName, android.Manifest.permission.POST_NOTIFICATIONS)
+        cleanTasks()
+    }
     @After fun cleanAfterTest() = cleanTasks()
     private fun openCapture() {
         compose.waitUntil(10_000) {

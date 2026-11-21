@@ -44,7 +44,7 @@ private fun DraftSaveStatus(state: CaptureState, onRetry: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun ReviewScreen(state: CaptureState, model: CaptureViewModel, onEdit: (String) -> Unit, onBack: () -> Unit) {
+fun ReviewScreen(state: CaptureState, model: CaptureViewModel, onEdit: (String) -> Unit, onBack: () -> Unit, onApprove: () -> Unit = model::approve) {
     val review = state.review ?: return
     DisposableEffect(Unit) { onDispose { model.dismissUndo() } }
     var discardReview by rememberSaveable { mutableStateOf(false) }
@@ -70,7 +70,7 @@ fun ReviewScreen(state: CaptureState, model: CaptureViewModel, onEdit: (String) 
         topBar = { TopAppBar(title = { Text(stringResource(R.string.review_title)) }, navigationIcon = {
             IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_back), stringResource(R.string.back)) }
         }) },
-        snackbarHost = { SnackbarHost(snackbar) }
+        bottomBar = { SnackbarHost(snackbar, if (snackbar.currentSnackbarData != null) Modifier.navigationBarsPadding() else Modifier) }
     ) { insets ->
         LazyColumn(Modifier.fillMaxSize().padding(insets).testTag("review_list"),
             contentPadding = PaddingValues(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -137,7 +137,7 @@ fun ReviewScreen(state: CaptureState, model: CaptureViewModel, onEdit: (String) 
                     if (review.tasks.isNotEmpty() && state.approvalError != ApprovalError.INVALID && !ApprovalValidation.isValid(review)) {
                         Text(stringResource(R.string.approval_invalid), color = MaterialTheme.colorScheme.error)
                     }
-                    Button(onClick = model::approve,
+                    Button(onClick = onApprove,
                         enabled = !state.approving && !state.saving && !state.saveFailed && ApprovalValidation.isValid(review),
                         colors = ButtonDefaults.buttonColors(containerColor = ActionPurple, contentColor = Color.White),
                         modifier = Modifier.fillMaxWidth()) {

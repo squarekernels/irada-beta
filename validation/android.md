@@ -201,3 +201,29 @@ At 200% text, the task body and **Complete task** remained distinct focusable ac
 TalkBack narration/focus order, physical devices, other Android versions, landscape and wide-screen task-management layouts remain unverified. Unsaved detail edits survive rotation but require **Save changes** for durable storage. Undo is a transient, single-operation action and does not survive process death. Notification permission, alarms, and notification reconciliation remain Stage 6 work; reminder delivery is explicitly shown as unavailable.
 
 Review APK: `apps/android/app/build/outputs/apk/debug/app-debug.apk` (`com.ctxaware.irada`).
+
+## Stage 6 — November 21, 2026
+
+Implemented on `codex/android-stage-6-reminders`. No commit or push has been made.
+
+### Delivered behavior
+
+Open, saved reminders schedule inexact `setAndAllowWhileIdle(RTC_WAKEUP)` alarms with stable per-task PendingIntents. Approval and all task edits, completion, reopening, deletion and Undo reconcile after the Room transaction. Application start/resume and boot, package replacement, clock and time-zone broadcasts repair scheduling from saved tasks. No exact-alarm permission is requested. Reminder wall-clock values are resolved against the current time zone, preserving 9 AM local; daylight-saving gaps move forward and overlaps choose the first offset.
+
+The first deliberate reminder approval or new/changed reminder save requests Android 13+ notification permission. Denial preserves the task and exposes disabled delivery with a system notification settings link. Settings shows notification status; returning from system settings reconciles again. Reminder rows explain Android may delay delivery. Receiver delivery checks the current task, status, reminder version and current-zone due time. Notification identities and durable per-task/time delivery receipts prevent duplicate alerts, including after restoring a previously delivered reminder. Completing/deleting/rescheduling cancels obsolete notifications and alarms. Notification content excludes notes and source input and is private on the lock screen.
+
+### Validation setup
+
+Used the isolated `com.ctxaware.irada.validation` application on the API 37 emulator. The unrelated untracked JDK 25 daemon criteria file was temporarily moved to `/private/tmp/irada-stage6-gradle-daemon-jvm.properties` to use installed JDK 21; restored after validation. Existing untracked Stage 4 screenshots were preserved.
+
+The initial device run exposed the new runtime permission dialog in the existing approval UI test, which now grants permission in its setup. An overlapping Android CLI layout inspection disconnected instrumentation's UI automation; a subsequent retry retained the stale connection. The emulator was rebooted and the suite rerun without concurrent UI automation. Those interrupted attempts are not counted as passing validation.
+
+### Final Stage 6 verification — November 21, 2026
+
+- `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug` passed: **22 JVM tests**, **zero Lint errors**.
+- The complete isolated connected suite passed with **26 tests**, **24 passed**, **2 skipped** and **zero failures**. The two skips are opt-in live Fastify HTTP tests and are unrelated to reminder lifecycle coverage.
+- The focused `ReminderLifecycleTest` suite passed **3/3** tests on API 37, covering stale delivery, completion/delete/Undo recreation, real PendingIntent delivery, and blocked notification channels.
+- The normal-ID Stage 6 APK was built and installed. A cold launch after `adb shell am force-stop com.ctxaware.irada` returned `Status: ok`, `LaunchState: COLD`, with no process exception.
+- The Stage 6 demo flag was used with the isolated validation application to preserve a synthetic pending review for manual owner inspection. It did not alter the normal-ID app.
+
+Still not validated by this run: boot-time delivery on a rebooted physical device, package replacement on a physical device, battery-policy batching, and exact wall-clock delivery latency. Those remain device/platform limitations rather than code failures. Stage 6 does not request exact-alarm permission and does not promise exact delivery.
