@@ -56,10 +56,11 @@ class PreviewControllerTest {
 
     @Test fun lateNonCooperativeResponseCannotReplaceNewerRequest() = runTest {
         lateinit var old: Continuation<PlanPreview>
+        val persisted = mutableListOf<String>()
         val controller = PreviewController(backgroundScope, PreviewService {
             if (it.input == "Old") suspendCoroutine { continuation -> old = continuation }
             else preview(it.input)
-        }, ::request)
+        }, ::request, onPreview = { persisted += it.input })
         controller.generate("Old") {}
         runCurrent()
         controller.cancel()
@@ -68,6 +69,7 @@ class PreviewControllerTest {
         old.resume(preview("Old"))
         runCurrent()
         assertEquals("New", (controller.state.value as PreviewState.Ready).preview.input)
+        assertEquals(listOf("New"), persisted)
     }
 
     @Test fun connectivityRecoveryDoesNotRetryAndRetryRefreshesTimeZone() = runTest {
@@ -78,7 +80,7 @@ class PreviewControllerTest {
             requests += it
             if (!available) throw java.io.IOException()
             preview(it.input)
-        }) { PreviewRequest(it, "en", zone) }
+        }, context = { PreviewRequest(it, "en", zone) })
         controller.generate("Buy groceries tomorrow") {}
         runCurrent()
         assertEquals(PreviewState.Failed(Problem.CONNECTION), controller.state.value)

@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ctxaware.irada.data.PendingDraft
 import com.ctxaware.irada.preview.*
+import com.ctxaware.irada.review.*
 import java.util.Locale
 import java.time.ZoneId
 import kotlinx.coroutines.CancellationException
@@ -21,21 +22,28 @@ data class CaptureState(
     val revision: Long = 0,
     val saving: Boolean = false,
     val saveFailed: Boolean = false,
-    val introducing: Boolean = false
+    val introducing: Boolean = false,
+    val review: ReviewDraft? = null,
+    val removed: RemovedProposal? = null
 )
+
+data class RemovedProposal(val task: ReviewTask, val index: Int)
 
 class CaptureViewModel(application: Application) : AndroidViewModel(application) {
     private val store = (application as IradaApplication).drafts
     private val _state = MutableStateFlow(CaptureState())
     val state = _state.asStateFlow()
-    private val previews = PreviewController(viewModelScope, (application as IradaApplication).previewService) { input ->
-        PreviewRequest(input, Locale.getDefault().toLanguageTag(), ZoneId.systemDefault().id)
-    }
+    private val previews = PreviewController(
+        viewModelScope,
+        (application as IradaApplication).previewService,
+        context = { input -> PreviewRequest(input, Locale.getDefault().toLanguageTag(), ZoneId.systemDefault().id) },
+        onPreview = { proposal -> persistReview(ReviewDraft.from(proposal)) }
+    )
     val preview = previews.state
 
     fun generatePreview() {
         val snapshot = _state.value
-        if (!snapshot.loaded || snapshot.draft.input.isBlank() || snapshot.draft.input.length > 10000) return
+        if (!snapshot.loaded || snapshot.review != null || snapshot.draft.input.isBlank() || snapshot.draft.input.length > 10000) return
         previews.generate(snapshot.draft.input) {
             // Re-save the snapshot and wait for Room before any network request.
             val revision = persist(snapshot.draft)
@@ -63,10 +71,11 @@ class CaptureViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             try {
                 val (introduced, draft) = store.load()
+                val review = ReviewCodec.decode(draft.reviewJson)
                 val revision = store.currentRevision
                 val result = store.result.value
                 _state.update { it.copy(loaded = true, introduced = introduced, draft = draft,
-                    revision = revision, saving = result.revision < revision,
+                    revision = revision, review = review, saving = result.revision < revision,
                     saveFailed = result.revision == revision && result.failed) }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -92,13 +101,62 @@ class CaptureViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun edit(input: String) { previews.cancel(); persist(_state.value.draft.copy(input = input)) }
+    fun edit(input: String) {
+        if (_state.value.review != null) return
+        previews.cancel()
+        persist(_state.value.draft.copy(input = input))
+    }
     fun discard() { previews.cancel(); persist(PendingDraft()) }
     fun retrySave() { persist(_state.value.draft) }
 
+    fun editProposal(id: String, edit: (ReviewTask) -> ReviewTask) {
+        _state.value.review?.let { persistReview(it.update(id, edit)) }
+    }
+
+    fun addProposal(): String? {
+        val review = _state.value.review ?: return null
+        if (review.tasks.size >= 100) return null
+        val task = ReviewTask()
+        dismissUndo()
+        persistReview(review.add(task))
+        return task.id
+    }
+
+    fun removeProposal(id: String) {
+        val review = _state.value.review ?: return
+        val index = review.tasks.indexOfFirst { it.id == id }
+        if (index < 0) return
+        persistReview(review.remove(id))
+        _state.update { it.copy(removed = RemovedProposal(review.tasks[index], index)) }
+    }
+
+    fun undoRemoval() {
+        val removed = _state.value.removed ?: return
+        _state.value.review?.let { persistReview(it.insert(removed.index, removed.task)) }
+        dismissUndo()
+    }
+
+    fun dismissUndo() { _state.update { it.copy(removed = null) } }
+
+    fun moveProposal(id: String, delta: Int) {
+        _state.value.review?.let { persistReview(it.move(id, delta)) }
+    }
+
+    // Called only after explicit confirmation. Original words and batch identity stay intact.
+    fun discardReview() {
+        previews.cancel()
+        persist(_state.value.draft.copy(reviewJson = null))
+    }
+
+    private fun persistReview(review: ReviewDraft) {
+        persist(_state.value.draft.copy(reviewJson = ReviewCodec.encode(review)))
+    }
+
     private fun persist(draft: PendingDraft): Long {
         val revision = store.nextRevision()
-        _state.update { it.copy(draft = draft, revision = revision, saving = true, saveFailed = false) }
+        _state.update { it.copy(draft = draft, review = ReviewCodec.decode(draft.reviewJson),
+            removed = if (draft.reviewJson == null) null else it.removed,
+            revision = revision, saving = true, saveFailed = false) }
         store.save(revision, draft)
         return revision
     }

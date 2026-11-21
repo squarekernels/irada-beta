@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 2,
+  "tables": [
+    "android_metadata",
+    "pending_draft",
+    "room_master_table"
+  ],
+  "draftRows": 1,
+  "titlesInOrder": [
+    "today at 1 to call Mum",
+    "Buy milk and bread",
+    "Call dentist"
+  ],
+  "editedDueDate": "2026-11-25",
+  "changedFields": [
+    "TITLE",
+    "DUE_DATE"
+  ],
+  "warningsPreserved": true,
+  "originalInputPreserved": true,
+  "approvedTaskTables": 0,
+  "scheduledAlarmsMatchingValidationPackage": 0
+}
