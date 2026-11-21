@@ -24,10 +24,29 @@ import kotlinx.serialization.Serializable
 @Serializable private data object Introduction : NavKey
 @Serializable private data object Home : NavKey
 @Serializable private data object Capture : NavKey
+@Serializable private data class TaskDetails(val id: String) : NavKey
 @Serializable private data object Settings : NavKey
 
 @Composable
 fun IradaApp(model: CaptureViewModel = viewModel()) {
+    val management: TaskManagementViewModel = viewModel()
+    val managementState by management.state.collectAsStateWithLifecycle()
+    val snackbar = remember { SnackbarHostState() }
+    val undoLabel = stringResource(R.string.undo)
+    val changedLabel = stringResource(R.string.task_changed)
+    val deletedLabel = stringResource(R.string.task_deleted)
+    val errorLabel = stringResource(R.string.task_change_failed)
+    LaunchedEffect(managementState.change, managementState.error) {
+        val change = managementState.change
+        if (managementState.error) {
+            snackbar.showSnackbar(errorLabel, withDismissAction = true)
+            management.clearError()
+        } else if (change != null) {
+            val result = snackbar.showSnackbar(if (change.after == null) deletedLabel else changedLabel,
+                undoLabel, withDismissAction = true, duration = SnackbarDuration.Short)
+            if (result == SnackbarResult.ActionPerformed) management.undo(change) else management.dismiss(change.sequence)
+        }
+    }
     val state by model.state.collectAsStateWithLifecycle()
     if (!state.loaded) {
         Column(Modifier.fillMaxSize().safeDrawingPadding().padding(24.dp),
@@ -75,55 +94,71 @@ fun IradaApp(model: CaptureViewModel = viewModel()) {
             }
         )
     }
-    NavDisplay(
-        backStack = backStack,
-        onBack = { back() },
-        entryProvider = entryProvider {
-            entry<Introduction> {
-                IntroductionScreen(state, onStart = {
-                    model.finishIntroduction {
-                        backStack.clear(); backStack.add(Home); backStack.add(Capture)
+    Surface(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().imePadding()) {
+            Box(Modifier.weight(1f)) {
+                NavDisplay(
+                    backStack = backStack,
+                    onBack = { back() },
+                    entryProvider = entryProvider {
+                        entry<Introduction> {
+                            IntroductionScreen(state, onStart = {
+                                model.finishIntroduction {
+                                    backStack.clear(); backStack.add(Home); backStack.add(Capture)
+                                }
+                            }, onHome = {
+                                model.finishIntroduction { backStack.clear(); backStack.add(Home) }
+                            })
+                        }
+                        entry<Home> {
+                            HomeScreen(
+                                state = state, onCapture = ::capture,
+                                onSettings = { backStack.add(Settings) },
+                                onResume = { if (!state.approving) backStack.add(Capture) },
+                                onRetryTasks = model::loadTasks,
+                                onOpenTask = { backStack.add(TaskDetails(it)) },
+                                onToggleTask = management::toggle, taskBusy = managementState.busy
+                            )
+                        }
+                        entry<Capture> {
+                            val preview by model.preview.collectAsStateWithLifecycle()
+                            var selectedTask by rememberSaveable(state.draft.batchId) { mutableStateOf<String?>(null) }
+                            val editingTask = state.review?.tasks?.firstOrNull { it.id == selectedTask }
+                            val hasReview = state.review != null
+                            BackHandler(enabled = selectedTask != null || hasReview || preview != PreviewState.Editing) {
+                                when {
+                                    selectedTask != null -> selectedTask = null
+                                    hasReview -> back()
+                                    else -> model.cancelPreview()
+                                }
+                            }
+                            when {
+                                editingTask != null -> ProposalEditorScreen(editingTask, state, model, onBack = { selectedTask = null })
+                                hasReview -> ReviewScreen(state, model, onEdit = { selectedTask = it }, onBack = ::back)
+                                else -> when (val current = preview) {
+                                    PreviewState.Editing -> CaptureScreen(state, model::edit, model::retrySave, model::generatePreview, ::back)
+                                    PreviewState.Processing -> ProcessingScreen(model::cancelPreview)
+                                    is PreviewState.Failed -> PreviewErrorScreen(current.problem, model::generatePreview, model::cancelPreview)
+                                    is PreviewState.Ready -> ProcessingScreen(model::cancelPreview)
+                                }
+                            }
+                        }
+                        entry<TaskDetails> { route ->
+                            TaskDetailScreen(state.tasks.firstOrNull { it.id == route.id }, managementState.busy,
+                                onSave = { before, after -> management.change(before, after, ::back) },
+                                onToggle = management::toggle,
+                                onDelete = { management.change(it, null, ::back) }, onBack = ::back)
+                        }
+                        entry<Settings> {
+                            ShellScreen(R.string.settings, R.string.settings_pending, ::back)
+                        }
                     }
-                }, onHome = {
-                    model.finishIntroduction { backStack.clear(); backStack.add(Home) }
-                })
-            }
-            entry<Home> {
-                HomeScreen(
-                    state = state, onCapture = ::capture,
-                    onSettings = { backStack.add(Settings) },
-                    onResume = { if (!state.approving) backStack.add(Capture) },
-                    onRetryTasks = model::loadTasks
                 )
             }
-            entry<Capture> {
-                val preview by model.preview.collectAsStateWithLifecycle()
-                var selectedTask by rememberSaveable(state.draft.batchId) { mutableStateOf<String?>(null) }
-                val editingTask = state.review?.tasks?.firstOrNull { it.id == selectedTask }
-                val hasReview = state.review != null
-                BackHandler(enabled = selectedTask != null || hasReview || preview != PreviewState.Editing) {
-                    when {
-                        selectedTask != null -> selectedTask = null
-                        hasReview -> back()
-                        else -> model.cancelPreview()
-                    }
-                }
-                when {
-                    editingTask != null -> ProposalEditorScreen(editingTask, state, model, onBack = { selectedTask = null })
-                    hasReview -> ReviewScreen(state, model, onEdit = { selectedTask = it }, onBack = ::back)
-                    else -> when (val current = preview) {
-                        PreviewState.Editing -> CaptureScreen(state, model::edit, model::retrySave, model::generatePreview, ::back)
-                        PreviewState.Processing -> ProcessingScreen(model::cancelPreview)
-                        is PreviewState.Failed -> PreviewErrorScreen(current.problem, model::generatePreview, model::cancelPreview)
-                        is PreviewState.Ready -> ProcessingScreen(model::cancelPreview)
-                    }
-                }
-            }
-            entry<Settings> {
-                ShellScreen(R.string.settings, R.string.settings_pending, ::back)
-            }
+            // Reserve the host's measured height so brief feedback never covers task actions.
+            SnackbarHost(snackbar, if (snackbar.currentSnackbarData != null) Modifier.navigationBarsPadding() else Modifier)
         }
-    )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

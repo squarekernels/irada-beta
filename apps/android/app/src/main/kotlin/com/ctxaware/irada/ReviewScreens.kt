@@ -239,7 +239,7 @@ fun ProposalEditorScreen(task: ReviewTask, state: CaptureState, model: CaptureVi
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CalendarDateDialog(initial: LocalDate?, onDismiss: () -> Unit, onSet: (LocalDate) -> Unit) {
+internal fun CalendarDateDialog(initial: LocalDate?, onDismiss: () -> Unit, onSet: (LocalDate) -> Unit) {
     val state = rememberDatePickerState(initialSelectedDateMillis = (initial ?: LocalDate.now()).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
     DatePickerDialog(onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = {
@@ -252,7 +252,7 @@ private fun CalendarDateDialog(initial: LocalDate?, onDismiss: () -> Unit, onSet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ReminderTimeDialog(initial: LocalTime, onDismiss: () -> Unit, onSet: (LocalTime) -> Unit) {
+internal fun ReminderTimeDialog(initial: LocalTime, onDismiss: () -> Unit, onSet: (LocalTime) -> Unit) {
     val state = rememberTimePickerState(initialHour = initial.hour, initialMinute = initial.minute,
         is24Hour = DateFormat.is24HourFormat(LocalContext.current))
     AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.reminder_time)) },

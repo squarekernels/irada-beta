@@ -105,6 +105,8 @@ class DraftStore(context: Context) {
         return seen to draft
     }
 
+    suspend fun changeTask(before: SavedTask?, after: SavedTask?) = database.approvals().changeTask(before, after)
+
     val currentRevision: Long get() = revisions.get()
 
     fun nextRevision(): Long = revisions.incrementAndGet()
