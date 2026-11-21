@@ -100,3 +100,46 @@ Screenshots: [capture](android/stage2/capture-light.png), [processing](android/s
 ### Scope and limitations
 
 The stub recognizes a small English vocabulary (`today`, `tomorrow`, numeric reminder times) and deliberately leaves unrecognized timing undated. It is not AI; general extraction, arbitrary dates and DST-gap disambiguation are unimplemented. No production HTTPS service is configured. Release configuration was checked, but a production endpoint/release-device journey was not tested. Disk-write failure is covered at the controller boundary, not by exhausting real device storage. TalkBack, 200% text, other API levels and physical devices remain unverified. Preview persistence/editing belongs to Stage 3; task approval belongs to Stage 4.
+
+## Stage 3 — November 21, 2026
+
+Stage 2 was approved, committed with the required co-author trailer, and pushed to `origin/codex/android-stage-2` as `e5b171b`. Stage 3 is implemented on `codex/android-stage-3`; it has not been committed or pushed. Stage 4 has not started.
+
+### Delivered behavior
+
+Review now edits the pending batch: title, multiline notes, optional due date, and an independent optional reminder date/time. Every proposal has a stable ID. Add, Remove with brief Undo, Move up/down, field edits and list order persist in the one Room draft. Undo is scoped to the current review visit, so its snackbar cannot reappear over controls after opening an editor. All ordinary navigation preserves the draft. Explicitly editing the original input asks **Keep editing** or **Discard proposals**; discarding proposals keeps the original words and batch identity.
+
+Untouched generated fields read **Suggested**; edited or newly added fields read **Your choice**. Clearing a due date produces **Anytime**. Changing a due date does not change the reminder. Original interpretation notes remain labeled as original, and batch warnings remain visible after edits. Incomplete/overlong pending fields are flagged without discarding the user's text. Editor Done/Back save edits and return to review; review Back returns to empty Home. Resume opens the persisted review offline without generating again.
+
+Room schema 2 adds nullable `reviewJson` with `AutoMigration(1, 2)`. Generated migration SQL is only `ALTER TABLE pending_draft ADD COLUMN reviewJson TEXT DEFAULT NULL`. Schema 1 is retained; no destructive fallback is configured. Review JSON stores proposal IDs/order, fields, edit provenance, original reasons and warnings. Approved-task storage, approval actions, alarms, and notification permission requests remain absent.
+
+### Automated checks
+
+- `./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug :app:connectedDebugAndroidTest -Pirada.applicationId=com.ctxaware.irada.validation -Pandroid.testInstrumentationRunnerArguments.runLivePreviewTests=true`: passed all 10 connected tests, all 14 unit tests and lint with no errors. The fixture ran on host port 3002, forwarded from device port 3000.
+- Then expanded the review UI journey with actual reminder date/time selection; reran `:app:connectedDebugAndroidTest` with `-Pandroid.testInstrumentationRunnerArguments.class=com.ctxaware.irada.ReviewFlowTest`: passed. This confirms the native date picker and reminder time picker set the intended local values.
+- Review journey changes a due date, edits title/notes, removes/undoes/removes a proposal, adds a new one, changes order, leaves for Home, resumes, recreates the Activity, cancels destructive input editing and resumes in a new Activity/ViewModel. Original input, exact whitespace/newlines, values, warnings and order are checked.
+- File-backed Room close/reopen preserves review JSON and stable batch identity. A raw schema-1 database containing exact Unicode/whitespace input migrates to schema 2 without loss. Storage inspection confirms one `pending_draft` row and only `pending_draft`, `room_master_table`, and `android_metadata` tables.
+- Unit tests verify per-field provenance, independent date/reminder values, stable IDs and ordering, remove/restore, boundary moves, empty/incomplete pending edits, codec round trips and duplicate-ID rejection. The stale-response regression also confirms canceled output never reaches the persistence callback.
+- Existing capture, navigation, cancellation, network retry and all three live Fastify acceptance examples still pass with the editable review flow.
+
+The calendar initially failed a test selector: Material 3 exposes calendar days as full-date text rather than short day-number text. The final test uses that actual label. A second failure exposed the removal snackbar surviving an editor visit and blocking a reorder tap; scoping Undo to review fixed the actual interaction. The emulator was restarted after the work resumed; the initial no-device run was rerun successfully once it was ready. No checks were bypassed or suppressed.
+
+### Manual acceptance and evidence
+
+Used only `com.ctxaware.irada.validation` for interaction and data inspection; the normal app's existing draft was not edited or cleared.
+
+1. Generated a real Fastify review from “Buy groceries tomorrow and Remind me today at 1 to call Mum and Book dentist”. Verified original words, Suggested labels, separate due/reminder values and the warning for a passed reminder.
+2. Changed the first proposal's title to **Buy milk and bread** and due date to **November 25, 2026**. Both labels changed to **Your choice**; the date-only proposal still had no reminder. The editor's save status and Done action stayed visible above the full software keyboard.
+3. Reordered that proposal, returned to Home and force-stopped the app. Enabled airplane mode and disabled Wi-Fi before reopening. Resume restored the same edited review and order without requesting the API.
+4. Removed **Book dentist**, added **Call dentist**, and force-stopped/reopened again offline. The removed item stayed removed, the added item stayed **Anytime**, and the edited title/date/order survived.
+5. Copied only the synthetic validation database and WAL into `/private/tmp` for SQLite inspection. Confirmed schema 2, one draft row, all three proposals in the expected order, unchanged original input, preserved warnings and TITLE/DUE_DATE provenance. There is no approved-task table.
+6. `adb shell dumpsys alarm` contained no `com.ctxaware.irada.validation` entry, including while the draft held a proposed reminder. No scheduling or notification permission request occurred.
+7. Visually inspected light review, editing with the keyboard, and the restored dark review. Restored light appearance and active connectivity after testing.
+
+Evidence: [suggestions and warning](android/stage3/review-suggestions-light.png), [editing above keyboard](android/stage3/editor-keyboard-light.png), [restored edits and Anytime, dark](android/stage3/review-restored-dark.png), [storage verification](android/stage3/storage-verification.json).
+
+### Remaining limits
+
+Real AI, approval and task insertion are outside Stage 3. The default reminder preference is still 09:00 until Stage 7. Tests ran on the API 37 phone emulator; physical devices, TalkBack, 200% text and wider layouts have not been validated for the new editor. An abrupt kill before the save acknowledgement can interrupt the latest queued write. The brief Undo itself is transient and is not restored after leaving review or process death. Corrupt persisted review data fails visibly and is not silently discarded.
+
+Final normal-ID review APK: `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` passed with **14 unit tests** and **zero lint errors**. Installed `com.ctxaware.irada` and observed Home with its existing Resume draft entry after migration. The existing draft was not opened or changed. The temporary Stage 3 fixture was stopped, and standard `adb reverse tcp:3000 tcp:3000`, light appearance and connectivity were restored. APK: `apps/android/app/build/outputs/apk/debug/app-debug.apk`.

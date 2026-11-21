@@ -49,8 +49,13 @@ class PreviewHttpTest {
         compose.waitUntil(10_000) { compose.onAllNodesWithText("Draft saved on this device").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Make a plan").performScrollTo().performClick()
     }
+    private fun editOriginal() {
+        compose.onNodeWithTag("review_list").performScrollToNode(hasText("Edit original input"))
+        compose.onNodeWithText("Edit original input").performClick()
+        compose.onNodeWithText("Discard proposals").performClick()
+    }
     private fun ready() {
-        compose.waitUntil(25_000) { compose.onAllNodesWithText("Your proposed plan").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(25_000) { compose.onAllNodesWithText("Review your plan").fetchSemanticsNodes().isNotEmpty() }
     }
 
     @Test fun threeExamplesUseRealFastifyWithoutSavingTasks() {
@@ -59,20 +64,22 @@ class PreviewHttpTest {
         ready()
         compose.onNodeWithText("Anytime").assertExists()
         compose.onNodeWithText("No reminder").assertExists()
-        compose.onNodeWithContentDescription("Edit input").performClick()
+        editOriginal()
         val tomorrow = LocalDate.now().plusDays(1)
         enter("Buy groceries tomorrow")
         ready()
         val due = compose.activity.getString(R.string.due_value, tomorrow.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
+        compose.onNodeWithTag("review_list").performScrollToNode(hasText(due))
         compose.onNodeWithText(due).assertExists()
         compose.onNodeWithText("No reminder").assertExists()
-        compose.onNodeWithContentDescription("Edit input").performClick()
+        editOriginal()
         enter("Remind me tomorrow at 9 to buy groceries")
         ready()
         val reminder = compose.activity.getString(R.string.reminder_value,
             LocalDateTime.of(tomorrow, LocalTime.of(9, 0)).format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)))
+        compose.onNodeWithTag("review_list").performScrollToNode(hasText(reminder))
         compose.onNodeWithText(reminder).assertExists()
-        compose.onNodeWithContentDescription("Edit input").performClick()
+        editOriginal()
         compose.onNodeWithContentDescription("Back").performClick()
         compose.onNodeWithText("A little space to think").assertIsDisplayed()
         val connection = URL("http://127.0.0.1:3000/api/tasks").openConnection() as HttpURLConnection
@@ -95,7 +102,7 @@ class PreviewHttpTest {
         compose.onNodeWithText("Could not make a plan").assertIsDisplayed()
         compose.onNodeWithText("Retry").performClick()
         ready()
-        compose.onNodeWithContentDescription("Edit input").performClick()
+        editOriginal()
         compose.onNode(hasSetTextAction()).assertTextContains(input)
     }
 }

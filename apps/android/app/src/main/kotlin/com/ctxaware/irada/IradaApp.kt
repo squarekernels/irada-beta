@@ -94,14 +94,25 @@ fun IradaApp(model: CaptureViewModel = viewModel()) {
             }
             entry<Capture> {
                 val preview by model.preview.collectAsStateWithLifecycle()
-                BackHandler(enabled = preview != PreviewState.Editing) { model.cancelPreview() }
-                when (val current = preview) {
-                    PreviewState.Editing -> CaptureScreen(state, model::edit, model::retrySave,
-                        model::generatePreview, ::back)
-                    PreviewState.Processing -> ProcessingScreen(model::cancelPreview)
-                    is PreviewState.Failed -> PreviewErrorScreen(current.problem,
-                        model::generatePreview, model::cancelPreview)
-                    is PreviewState.Ready -> PlanPreviewScreen(current.preview, model::cancelPreview)
+                var selectedTask by rememberSaveable(state.draft.batchId) { mutableStateOf<String?>(null) }
+                val editingTask = state.review?.tasks?.firstOrNull { it.id == selectedTask }
+                val hasReview = state.review != null
+                BackHandler(enabled = selectedTask != null || hasReview || preview != PreviewState.Editing) {
+                    when {
+                        selectedTask != null -> selectedTask = null
+                        hasReview -> back()
+                        else -> model.cancelPreview()
+                    }
+                }
+                when {
+                    editingTask != null -> ProposalEditorScreen(editingTask, state, model, onBack = { selectedTask = null })
+                    hasReview -> ReviewScreen(state, model, onEdit = { selectedTask = it }, onBack = ::back)
+                    else -> when (val current = preview) {
+                        PreviewState.Editing -> CaptureScreen(state, model::edit, model::retrySave, model::generatePreview, ::back)
+                        PreviewState.Processing -> ProcessingScreen(model::cancelPreview)
+                        is PreviewState.Failed -> PreviewErrorScreen(current.problem, model::generatePreview, model::cancelPreview)
+                        is PreviewState.Ready -> ProcessingScreen(model::cancelPreview)
+                    }
                 }
             }
             entry<Settings> {

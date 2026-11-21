@@ -17,7 +17,8 @@ import java.util.concurrent.atomic.AtomicLong
 data class PendingDraft(
     @PrimaryKey val slot: Int = 1,
     val batchId: String = UUID.randomUUID().toString(),
-    val input: String = ""
+    val input: String = "",
+    @ColumnInfo(defaultValue = "NULL") val reviewJson: String? = null
 )
 
 @Dao
@@ -29,7 +30,8 @@ interface DraftDao {
     suspend fun save(draft: PendingDraft)
 }
 
-@Database(entities = [PendingDraft::class], version = 1, exportSchema = true)
+@Database(entities = [PendingDraft::class], version = 2, exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2)])
 abstract class IradaDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
 

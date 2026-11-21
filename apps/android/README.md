@@ -80,3 +80,15 @@ Opt-in HTTP integration checks require `node test-support/preview-server.js` fro
 ```
 
 Without that argument, the live HTTP tests skip; controller/client and fake-service UI tests remain independent of a running server. Build `:app:assembleDebug` again without the validation property for the review APK. See [validation](../../../validation/android.md) for results and screenshots.
+
+## Stage 3 · Editable batch review
+
+Generated proposals now open **Review your plan** and are saved with the original input in the single Room draft. Each proposal has a stable ID and stored list position. Titles, notes, optional due dates and separate reminder date/time can be edited. **Add a task**, **Remove** (with brief Undo), **Move up** and **Move down** operate on proposals only. An undated item reads **Anytime**.
+
+“Suggested” applies to untouched generated fields; an explicitly changed field reads “Your choice.” Changing a due date does not alter its reminder. Original interpretation notes and batch warnings remain visible. Incomplete titles/overlong fields can be kept as pending edits and are flagged; they do not become tasks. Date/time pickers use calendar dates and local wall-clock values.
+
+Back and **Keep draft and return to tasks** preserve review and return to Home. **Resume draft** reopens review offline without a request. Editor Back/Done keep every typed edit. **Edit original input** first offers **Keep editing** or **Discard proposals**; only explicit discard removes proposal edits, retaining the original input and batch identity. Starting a different capture still uses the existing Resume/Discard choice.
+
+Room schema 2 adds nullable `reviewJson` using an automatic 1→2 migration. Existing text and batch identity stay intact. The payload stores proposal IDs/order, values, per-field edit provenance, original reasons and interpretation warnings. Corrupt review data is not silently cleared. Wait for **Draft saved on this device** before intentionally force-stopping; an abrupt kill before acknowledgement can interrupt the latest write.
+
+There is still no approval action, approved-task table, alarm scheduling or notification permission request. Approval is Stage 4. Stage 3 device tests continue to use `-Pirada.applicationId=com.ctxaware.irada.validation`; the full live suite additionally needs the fixture and `runLivePreviewTests` flag documented above.

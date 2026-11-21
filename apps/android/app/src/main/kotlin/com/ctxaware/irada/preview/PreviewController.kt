@@ -17,7 +17,8 @@ class DraftSaveFailed : Exception()
 class PreviewController(
     private val scope: CoroutineScope,
     private val service: PreviewService,
-    private val context: (String) -> PreviewRequest
+    private val context: (String) -> PreviewRequest,
+    private val onPreview: (PlanPreview) -> Unit = {}
 ) {
     private var generation = 0L
     private var job: Job? = null
@@ -33,7 +34,10 @@ class PreviewController(
                 save()
                 ensureActive()
                 val preview = service.generate(context(input))
-                if (id == generation) _state.value = PreviewState.Ready(preview)
+                if (id == generation) {
+                    onPreview(preview)
+                    _state.value = PreviewState.Ready(preview)
+                }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
