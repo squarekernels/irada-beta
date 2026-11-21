@@ -1,6 +1,8 @@
 package com.ctxaware.irada.data
 
 import android.content.Context
+import com.ctxaware.irada.tasks.*
+import java.time.LocalDateTime
 import androidx.room3.*
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -30,10 +32,11 @@ interface DraftDao {
     suspend fun save(draft: PendingDraft)
 }
 
-@Database(entities = [PendingDraft::class], version = 2, exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)])
+@Database(entities = [PendingDraft::class, SavedTask::class, ApprovedBatch::class], version = 3, exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)])
 abstract class IradaDatabase : RoomDatabase() {
     abstract fun drafts(): DraftDao
+    abstract fun approvals(): ApprovalDao
 
     companion object {
         fun open(context: Context, name: String = "irada.db") =
@@ -46,6 +49,13 @@ abstract class IradaDatabase : RoomDatabase() {
 private val Context.preferences by preferencesDataStore(name = "settings")
 private val introduced = booleanPreferencesKey("introduced")
 
+data class ApprovalOutcome(val receipt: ApprovedBatch, val nextDraft: PendingDraft)
+
+private sealed interface DraftOperation {
+    data class Save(val revision: Long, val draft: PendingDraft) : DraftOperation
+    data class Approve(val draft: PendingDraft, val done: CompletableDeferred<ApprovalOutcome>) : DraftOperation
+}
+
 data class WriteResult(val revision: Long, val failed: Boolean)
 
 class DraftStore(context: Context) {
@@ -55,20 +65,35 @@ class DraftStore(context: Context) {
     private val preferences = context.applicationContext.preferences
     // Application lifetime: navigation and Activity destruction cannot cancel queued writes.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val writes = Channel<Pair<Long, PendingDraft>>(Channel.UNLIMITED)
+    private val writes = Channel<DraftOperation>(Channel.UNLIMITED)
+    val tasks: Flow<List<SavedTask>> = database.approvals().observeTasks()
     private val _result = MutableStateFlow(WriteResult(0, false))
     val result = _result.asStateFlow()
 
     init {
         scope.launch {
-            for ((revision, draft) in writes) {
-                try {
-                    database.drafts().save(draft)
-                    _result.value = WriteResult(revision, false)
-                } catch (cancelled: CancellationException) {
-                    throw cancelled
-                } catch (_: Exception) {
-                    _result.value = WriteResult(revision, true)
+            for (operation in writes) when (operation) {
+                is DraftOperation.Save -> {
+                    try {
+                        val saved = database.approvals().saveIfPending(operation.draft)
+                        if (!saved && cached?.batchId == operation.draft.batchId) {
+                            cached = database.approvals().draft() ?: PendingDraft()
+                        }
+                        _result.value = WriteResult(operation.revision, !saved)
+                    } catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { _result.value = WriteResult(operation.revision, true) }
+                }
+                is DraftOperation.Approve -> {
+                    try {
+                        val receipt = database.approvals().approve(operation.draft, System.currentTimeMillis(), LocalDateTime.now().toString())
+                        val next = cached?.takeIf { it.batchId != operation.draft.batchId } ?: PendingDraft()
+                        cached = next
+                        operation.done.complete(ApprovalOutcome(receipt, next))
+                    } catch (cancelled: CancellationException) { operation.done.cancel(cancelled); throw cancelled }
+                    catch (error: Exception) {
+                        if (error is StaleDraft) cached = error.current
+                        operation.done.completeExceptionally(error)
+                    }
                 }
             }
         }
@@ -89,8 +114,14 @@ class DraftStore(context: Context) {
     suspend fun awaitSaved(revision: Long): Boolean =
         !result.first { it.revision >= revision }.failed
 
+    suspend fun approve(draft: PendingDraft): ApprovalOutcome {
+        val done = CompletableDeferred<ApprovalOutcome>()
+        writes.send(DraftOperation.Approve(draft, done))
+        return done.await()
+    }
+
     fun save(revision: Long, draft: PendingDraft) {
         cached = draft
-        check(writes.trySend(revision to draft).isSuccess)
+        check(writes.trySend(DraftOperation.Save(revision, draft)).isSuccess)
     }
 }

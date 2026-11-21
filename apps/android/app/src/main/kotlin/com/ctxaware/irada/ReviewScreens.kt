@@ -20,6 +20,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.ctxaware.irada.review.*
+import com.ctxaware.irada.tasks.ApprovalValidation
+import androidx.compose.ui.res.pluralStringResource
+import com.ctxaware.irada.ui.theme.ActionPurple
+import androidx.compose.ui.graphics.Color
 import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -105,17 +109,17 @@ fun ReviewScreen(state: CaptureState, model: CaptureViewModel, onEdit: (String) 
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             val editLabel = stringResource(R.string.edit_task_number, index + 1)
                             val removeLabel = stringResource(R.string.remove_task_number, index + 1)
-                            TextButton(onClick = { onEdit(task.id) }, modifier = Modifier.semantics { contentDescription = editLabel }) {
+                            TextButton(onClick = { onEdit(task.id) }, enabled = !state.approving, modifier = Modifier.semantics { contentDescription = editLabel }) {
                                 Text(stringResource(R.string.edit_task))
                             }
-                            TextButton(onClick = { model.removeProposal(task.id) }, modifier = Modifier.semantics { contentDescription = removeLabel }) {
+                            TextButton(onClick = { model.removeProposal(task.id) }, enabled = !state.approving, modifier = Modifier.semantics { contentDescription = removeLabel }) {
                                 Text(stringResource(R.string.remove_task))
                             }
                             val upLabel = stringResource(R.string.move_task_up, index + 1)
                             val downLabel = stringResource(R.string.move_task_down, index + 1)
-                            TextButton(onClick = { model.moveProposal(task.id, -1) }, enabled = index > 0,
+                            TextButton(onClick = { model.moveProposal(task.id, -1) }, enabled = !state.approving && index > 0,
                                 modifier = Modifier.semantics { contentDescription = upLabel }) { Text(stringResource(R.string.move_up)) }
-                            TextButton(onClick = { model.moveProposal(task.id, 1) }, enabled = index < review.tasks.lastIndex,
+                            TextButton(onClick = { model.moveProposal(task.id, 1) }, enabled = !state.approving && index < review.tasks.lastIndex,
                                 modifier = Modifier.semantics { contentDescription = downLabel }) { Text(stringResource(R.string.move_down)) }
                         }
                     }
@@ -123,9 +127,27 @@ fun ReviewScreen(state: CaptureState, model: CaptureViewModel, onEdit: (String) 
             }
             item(key = "actions") {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = { model.addProposal()?.let(onEdit) }, enabled = review.tasks.size < 100,
+                    state.approvalError?.let { error ->
+                        Text(stringResource(when (error) {
+                            ApprovalError.WRITE -> R.string.approval_write_failed
+                            ApprovalError.CHANGED -> R.string.approval_changed
+                            ApprovalError.INVALID -> R.string.approval_invalid
+                        }), color = MaterialTheme.colorScheme.error)
+                    }
+                    if (review.tasks.isNotEmpty() && state.approvalError != ApprovalError.INVALID && !ApprovalValidation.isValid(review)) {
+                        Text(stringResource(R.string.approval_invalid), color = MaterialTheme.colorScheme.error)
+                    }
+                    Button(onClick = model::approve,
+                        enabled = !state.approving && !state.saving && !state.saveFailed && ApprovalValidation.isValid(review),
+                        colors = ButtonDefaults.buttonColors(containerColor = ActionPurple, contentColor = Color.White),
+                        modifier = Modifier.fillMaxWidth()) {
+                        Text(if (state.approving) stringResource(R.string.approving_tasks)
+                            else pluralStringResource(R.plurals.approve_tasks, review.tasks.size, review.tasks.size))
+                    }
+                    if (review.tasks.any { it.reminderAt != null }) Text(stringResource(R.string.reminder_delivery_pending), style = MaterialTheme.typography.bodyMedium)
+                    OutlinedButton(onClick = { model.addProposal()?.let(onEdit) }, enabled = !state.approving && review.tasks.size < 100,
                         modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.add_proposal)) }
-                    TextButton(onClick = { discardReview = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_original_input)) }
+                    TextButton(onClick = { discardReview = true }, enabled = !state.approving, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_original_input)) }
                     OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.keep_draft_home)) }
                 }
             }
